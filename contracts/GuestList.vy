@@ -6,24 +6,35 @@ guests: public(HashMap[address, bool])
 tokens: public(HashMap[address, uint256])
 active_tokens: public(address[10])
 
+
 @external
 def __init__():
     self.bouncer = msg.sender
 
-@external
-def set_guest(guest: address, invited: bool):
-    assert msg.sender == self.bouncer
-    self.guests[guest] = invited
 
 @external
-def set_token(token: address, min_amount: uint256):
+def set_guests(guest: address[20], invited: bool[20]):
     assert msg.sender == self.bouncer
-    self.tokens[token] = min_amount
+    for i in range(20):
+        if guest[i] == ZERO_ADDRESS:
+            break
+        self.guests[guest[i]] = invited[i]
 
 @external
-def set_active_tokens(active: address[10]):
+def set_tokens(token: address[10], min_amount: uint256[10]):
     assert msg.sender == self.bouncer
-    self.active_tokens = active
+    self.active_tokens = token
+    for i in range(10):
+        if token[i] == ZERO_ADDRESS:
+            break
+        self.tokens[token[i]] = min_amount[i]
+
+
+@external
+def set_bouncer(new_bouncer: address):
+    assert msg.sender == self.bouncer
+    self.bouncer = new_bouncer
+
 
 @view
 @external
