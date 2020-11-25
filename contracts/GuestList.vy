@@ -1,37 +1,45 @@
 # @version 0.2.7
 from vyper.interfaces import ERC20
 
+
+interface Vault:
+    def balanceOf(user: address) -> uint256: view
+    def getPricePerFullShare() -> uint256: view
+
+
 bouncer: public(address)
 guests: public(HashMap[address, bool])
-tokens: public(address[10])
-amounts: public(uint256[10])
+min_bag: public(uint256)
+yfi: ERC20
+ygov: ERC20
+yyfi: Vault
 
 
 @external
 def __init__():
     self.bouncer = msg.sender
+    self.yfi = ERC20(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)
+    self.ygov = ERC20(0xBa37B002AbaFDd8E89a1995dA52740bbC013D992)
+    self.yyfi = Vault(0xBA2E7Fed597fd0E3e70f5130BcDbbFE06bB94fe1)
+    self.min_bag = 10 ** 18
 
 
 @external
-def set_guests(guest: address[20], invited: bool[20]):
+def set_guest(guest: address, invited: bool):
     """
     Invite of kick guests from the party.
     """
     assert msg.sender == self.bouncer
-    for i in range(20):
-        if guest[i] == ZERO_ADDRESS:
-            break
-        self.guests[guest[i]] = invited[i]
+    self.guests[guest] = invited
 
 
 @external
-def set_permits(_tokens: address[10], _amounts: uint256[10]):
+def set_min_bag(new_min_bag: uint256):
     """
-    Set tokens and min amounts which guarantee entrance.
+    Set the minimum bag size to bypass the guest list.
     """
     assert msg.sender == self.bouncer
-    self.tokens = _tokens
-    self.amounts = _amounts
+    self.min_bag = new_min_bag
 
 
 @external
@@ -44,6 +52,25 @@ def set_bouncer(new_bouncer: address):
 
 
 @view
+@internal
+def _total_yfi(user: address) -> uint256:
+    return (
+        self.yfi.balanceOf(user)
+        + self.ygov.balanceOf(user)
+        + self.yyfi.balanceOf(user) * self.yyfi.getPricePerFullShare() / 10 ** 18
+    )
+
+
+@view
+@external
+def total_yfi(user: address) -> uint256:
+    """
+    Total YFI in wallet + yGov + YFI vault.
+    """
+    return self._total_yfi(user)
+
+
+@view
 @external
 def authorized(guest: address, amount: uint256) -> bool:
     """
@@ -51,9 +78,5 @@ def authorized(guest: address, amount: uint256) -> bool:
     """
     if self.guests[guest]:
         return True
-    for i in range(10):
-        if self.tokens[i] == ZERO_ADDRESS:
-            break
-        if ERC20(self.tokens[i]).balanceOf(guest) >= self.amounts[i]:
-            return True
-    return False
+    
+    return self._total_yfi(guest) >= self.min_bag
