@@ -72,7 +72,7 @@ def total_yfi(user: address) -> uint256:
 
 @view
 @external
-def authorized(guest: address, amount: uint256) -> bool:
+def authorized(guest: address, amount: uint256 = 0) -> bool:
     """
     Check if a user with a bag of certain size is allowed to the party.
     """
