@@ -1,30 +1,55 @@
-ZERO_ADDRESS = "0x" + "0" * 40
+def test_override(guest_list, guest):
+    assert not guest_list.authorized(guest, 0)
+    guest_list.set_guest(guest, True)
+    assert guest_list.authorized(guest, 0)
+    guest_list.set_guest(guest, False)
+    assert not guest_list.authorized(guest, 0)
 
 
-def pad(data, fill, length):
-    return data + [fill for _ in range(length - len(data))]
+def test_yfi(guest_list, guest, yfi):
+    assert not guest_list.authorized(guest, 0)
+    bag = guest_list.min_bag()
+    yfi.transfer(guest, bag)
+    assert guest_list.total_yfi(guest) == bag
+    assert guest_list.authorized(guest, 0)
 
 
-def test_guests(guest_list, accounts):
-    bouncer, *guests = accounts
-    _guests = pad(guests[:2], ZERO_ADDRESS, 20)
-    _invited = pad([True], False, 20)
-    guest_list.set_guests(_guests, _invited)
-    assert guest_list.authorized(guests[0], 0)
-    assert not guest_list.authorized(guests[1], 0)
+def test_ygov(guest_list, guest, yfi, ygov):
+    assert not guest_list.authorized(guest, 0)
+    bag = guest_list.min_bag()
+    yfi.transfer(guest, bag)
+    yfi.approve(ygov, bag, {"from": guest})
+    ygov.stake(bag)
+    assert guest_list.total_yfi(guest) == bag
+    assert guest_list.authorized(guest, 0)
 
 
-def test_permits(guest_list, tokens, accounts):
-    bouncer, *guests = accounts
-    _tokens = pad(tokens, ZERO_ADDRESS, 10)
-    _amounts = pad(["1 ether", "2 ether"], 0, 10)
-    guest_list.set_permits(_tokens, _amounts)
-    # not enough initially
-    tokens[0].transfer(guests[0], "0.5 ether")
-    assert not guest_list.authorized(guests[0], 0)
-    # pass with another token
-    tokens[1].transfer(guests[0], "3 ether")
-    assert guest_list.authorized(guests[0], 0)
-    # pass with exact amount
-    tokens[0].transfer(guests[1], "1 ether")
-    assert guest_list.authorized(guests[1], 0)
+def test_yyfi(guest_list, guest, yfi, yyfi):
+    assert not guest_list.authorized(guest, 0)
+    bag = guest_list.min_bag() + 1
+    yfi.transfer(guest, bag)
+    yfi.approve(yyfi, bag, {"from": guest})
+    yyfi.deposit(bag)
+    assert guest_list.total_yfi(guest) >= guest_list.min_bag()
+    assert guest_list.authorized(guest, 0)
+
+
+def test_combined(guest_list, guest, yfi, ygov, yyfi):
+    assert not guest_list.authorized(guest, 0)
+    bag = guest_list.min_bag() + 1
+    yfi.transfer(guest, bag)
+    yfi.approve(ygov, bag, {"from": guest})
+    ygov.stake(bag / 3)
+    yfi.approve(yyfi, bag, {"from": guest})
+    yyfi.deposit(yfi.balanceOf(guest))
+    assert guest_list.total_yfi(guest) >= guest_list.min_bag()
+    assert guest_list.authorized(guest, 0)
+
+
+def test_decay(guest_list, guest, yfi, chain):
+    assert guest_list.entrance_cost() == guest_list.min_bag()
+    for i in range(9, -1, -1):
+        chain.sleep(guest_list.ape_out() // 10)
+        chain.mine()
+        assert guest_list.entrance_cost() <= guest_list.min_bag() * i / 10
+        print(guest_list.entrance_cost())
