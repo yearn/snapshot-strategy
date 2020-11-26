@@ -94,6 +94,8 @@ def set_bouncer(new_bouncer: address):
 @internal
 def _yfi_in_makerdao(user: address) -> uint256:
     proxy: address = self.proxy_registry.proxies(user)
+    if proxy == ZERO_ADDRESS:
+        return 0
     cdp: uint256 = self.cdp_manager.first(proxy)
     urn: address = ZERO_ADDRESS
     total: uint256 = 0
