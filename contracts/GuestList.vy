@@ -9,7 +9,9 @@ interface Vault:
 
 bouncer: public(address)
 guests: public(HashMap[address, bool])
-min_bag: public(uint256)
+min_bag: public(uint256)  # 1 YFI to enter
+ape_out: public(uint256)  # 30 days falloff
+activation: public(uint256)
 yfi: ERC20
 ygov: ERC20
 yyfi: Vault
@@ -22,6 +24,8 @@ def __init__():
     self.ygov = ERC20(0xBa37B002AbaFDd8E89a1995dA52740bbC013D992)
     self.yyfi = Vault(0xBA2E7Fed597fd0E3e70f5130BcDbbFE06bB94fe1)
     self.min_bag = 10 ** 18
+    self.ape_out = 86400 * 30
+    self.activation = block.timestamp
 
 
 @external
@@ -62,6 +66,14 @@ def _total_yfi(user: address) -> uint256:
 
 
 @view
+@internal
+def _time_factor(bag: uint256) -> uint256:
+    if block.timestamp > self.activation + self.ape_out:
+        return 0
+    return bag - bag * (block.timestamp - self.activation) / self.ape_out
+
+
+@view
 @external
 def total_yfi(user: address) -> uint256:
     """
@@ -72,11 +84,18 @@ def total_yfi(user: address) -> uint256:
 
 @view
 @external
+def entrance_cost() -> uint256:
+    return self._time_factor(self.min_bag)
+
+
+@view
+@external
 def authorized(guest: address, amount: uint256 = 0) -> bool:
     """
     Check if a user with a bag of certain size is allowed to the party.
     """
     if self.guests[guest]:
+        return True    
+    if block.timestamp > self.activation + self.ape_out:
         return True
-    
-    return self._total_yfi(guest) >= self.min_bag
+    return self._total_yfi(guest) >= self._time_factor(self.min_bag)

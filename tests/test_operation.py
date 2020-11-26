@@ -44,3 +44,13 @@ def test_combined(guest_list, guest, yfi, ygov, yyfi):
     yyfi.deposit(yfi.balanceOf(guest))
     assert guest_list.total_yfi(guest) >= guest_list.min_bag()
     assert guest_list.authorized(guest)
+
+
+def test_decay(guest_list, guest, yfi, chain):
+    assert guest_list.entrance_cost() == "1 ether"
+    chain.sleep(guest_list.ape_out() // 2)
+    chain.mine()
+    assert guest_list.entrance_cost() <= "0.5 ether"
+    chain.sleep(guest_list.ape_out() // 2)
+    chain.mine()
+    assert guest_list.entrance_cost() == 0
