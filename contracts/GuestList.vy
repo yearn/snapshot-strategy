@@ -68,9 +68,7 @@ def _total_yfi(user: address) -> uint256:
 @view
 @internal
 def _time_factor(bag: uint256) -> uint256:
-    if block.timestamp > self.activation + self.ape_out:
-        return 0
-    return bag - bag * (block.timestamp - self.activation) / self.ape_out
+    return bag - min(bag * (block.timestamp - self.activation) / self.ape_out, bag)
 
 
 @view
@@ -90,7 +88,7 @@ def entrance_cost() -> uint256:
 
 @view
 @external
-def authorized(guest: address, amount: uint256 = 0) -> bool:
+def authorized(guest: address, amount: uint256) -> bool:
     """
     Check if a user with a bag of certain size is allowed to the party.
     """
