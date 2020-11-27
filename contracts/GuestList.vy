@@ -92,39 +92,11 @@ def __init__():
     self.bancor = Bancor(0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55)
 
 
-@external
-def set_guest(guest: address, invited: bool):
-    """
-    Invite of kick guests from the party.
-    """
-    assert msg.sender == self.bouncer
-    self.guests[guest] = invited
-
-
-@external
-def set_bouncer(new_bouncer: address):
-    """
-    Replace bouncer role.
-    """
-    assert msg.sender == self.bouncer
-    self.bouncer = new_bouncer
-
-
 @view
 @internal
 def _entrance_cost() -> uint256:
     elapsed: uint256 = min(block.timestamp - self.activation, self.ape_out)
     return self.min_bag - self.min_bag * elapsed / self.ape_out
-
-
-@external
-def bribe_the_bouncer(guest: address = msg.sender):
-    """
-    Sneak into the party by bribing the bouncer with 2% of the entrance cost.
-    """
-    assert not self.guests[guest]  # dev: already invited
-    self.yfi.transferFrom(msg.sender, self.bouncer, self._entrance_cost() / 50)
-    self.guests[guest] = True
 
 
 @view
@@ -179,22 +151,6 @@ def yfi_in_bancor(user: address) -> uint256:
 
 
 @view
-@external
-def total_yfi(user: address) -> uint256:
-    """
-    Total YFI in wallet + ygov + vault + makerdao + uniswap lp + sushiswap lp.
-    """
-    return (
-        self.yfi.balanceOf(user)
-        + self.ygov.balanceOf(user)
-        + self.yfi_in_vault(user)
-        + self.yfi_in_makerdao(user)
-        + self.yfi_in_liquidity_pools(user)
-        + self.yfi_in_bancor(user)
-    )
-
-
-@view
 @internal
 def enough_yfi(user: address, threshold: uint256) -> bool:
     # gas-optimized, exits as soon as threshold is reached
@@ -219,11 +175,68 @@ def enough_yfi(user: address, threshold: uint256) -> bool:
         return True
     return False
 
+# EXTERNAL FUNCTIONS
+
+@external
+def set_guest(guest: address, invited: bool):
+    """
+    Invite of kick guests from the party.
+    """
+    assert msg.sender == self.bouncer
+    self.guests[guest] = invited
+
+
+@external
+def set_bouncer(new_bouncer: address):
+    """
+    Replace bouncer role.
+    """
+    assert msg.sender == self.bouncer
+    self.bouncer = new_bouncer
+
+
+@external
+def bribe_the_bouncer(guest: address = msg.sender):
+    """
+    Sneak into the party by bribing the bouncer with 2% of the entrance cost.
+    """
+    assert not self.guests[guest]  # dev: already invited
+    self.yfi.transferFrom(msg.sender, self.bouncer, self._entrance_cost() / 50)
+    self.guests[guest] = True
+
+
+@view
+@external
+def total_yfi(user: address) -> uint256:
+    """
+    Total YFI in wallet + ygov + vault + makerdao + uniswap lp + sushiswap lp.
+    """
+    return (
+        self.yfi.balanceOf(user)
+        + self.ygov.balanceOf(user)
+        + self.yfi_in_vault(user)
+        + self.yfi_in_makerdao(user)
+        + self.yfi_in_liquidity_pools(user)
+        + self.yfi_in_bancor(user)
+    )
+
 
 @view
 @external
 def entrance_cost() -> uint256:
+    """
+    How much productive YFI is currently needed to enter.
+    """
     return self._entrance_cost()
+
+
+@view
+@external
+def bribe_cost() -> uint256:
+    """
+    How much YFI you need to bribe the bouncer with to enter.
+    """
+    return self._entrance_cost() / 50
 
 
 @view
