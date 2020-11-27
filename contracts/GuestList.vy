@@ -35,8 +35,8 @@ interface Vat:
 
 bouncer: public(address)
 guests: public(HashMap[address, bool])
-min_bag: public(uint256)  # 1 YFI to enter
-ape_out: public(uint256)  # 30 days falloff
+min_bag: public(uint256)
+ape_out: public(uint256)
 activation: public(uint256)
 yfi: ERC20
 ygov: ERC20
@@ -45,22 +45,33 @@ proxy_registry: DSProxyRegistry
 cdp_manager: DssCdpManager
 vat: Vat
 ilk: bytes32
+weth: ERC20
+uni_pairs: address[2]
 
 
 @external
 def __init__():
     self.bouncer = msg.sender
     self.activation = block.timestamp
-    self.min_bag = 10 ** 18
-    self.ape_out = 86400 * 30
+    # constants
+    self.min_bag = 10 ** 18  # 1 YFI to enter
+    self.ape_out = 30 * 86400  # 30 days falloff
+    # tokens
+    self.weth = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
     self.yfi = ERC20(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)
     self.ygov = ERC20(0xBa37B002AbaFDd8E89a1995dA52740bbC013D992)
     self.yyfi = Vault(0xBA2E7Fed597fd0E3e70f5130BcDbbFE06bB94fe1)
+    # makerdao
     self.proxy_registry = DSProxyRegistry(0x4678f0a6958e4D2Bc4F1BAF7Bc52E8F3564f3fE4)
     self.cdp_manager = DssCdpManager(0x5ef30b9986345249bc32d8928B7ee64DE9435E39)
     self.vat = Vat(0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B)
     yfi_a: Bytes[32] = b"YFI-A"
     self.ilk = convert(yfi_a, bytes32)
+    # liquidity providers
+    self.uni_pairs = [
+        0x2fDbAdf3C4D5A8666Bc06645B8358ab803996E28,  # Uniswap YFI/WETH
+        0x088ee5007C98a9677165D78dD2109AE4a3D04d0C,  # Sushiswap YFI/WETH
+    ]
 
 
 @external
@@ -106,6 +117,15 @@ def _yfi_in_makerdao(user: address) -> uint256:
             urn = self.cdp_manager.urns(cdp)
             total += self.vat.urns(self.ilk, urn).ink        
         cdp = self.cdp_manager.list(cdp).next
+    return total
+
+
+@view
+@internal
+def yfi_in_liquidity_pools(user: address) -> uint256:
+    total: uint256 = 0
+    for pair in self.uni_pairs:
+        total += self.yfi.balanceOf(pair) * ERC20(pair).balanceOf(user) / ERC20(pair).totalSupply()
     return total
 
 
