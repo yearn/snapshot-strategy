@@ -45,7 +45,6 @@ proxy_registry: DSProxyRegistry
 cdp_manager: DssCdpManager
 vat: Vat
 ilk: bytes32
-weth: ERC20
 uni_pairs: address[2]
 
 
@@ -57,7 +56,6 @@ def __init__():
     self.min_bag = 10 ** 18  # 1 YFI to enter
     self.ape_out = 30 * 86400  # 30 days falloff
     # tokens
-    self.weth = ERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)
     self.yfi = ERC20(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)
     self.ygov = ERC20(0xBa37B002AbaFDd8E89a1995dA52740bbC013D992)
     self.yyfi = Vault(0xBA2E7Fed597fd0E3e70f5130BcDbbFE06bB94fe1)
