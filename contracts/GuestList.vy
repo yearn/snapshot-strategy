@@ -45,7 +45,7 @@ proxy_registry: DSProxyRegistry
 cdp_manager: DssCdpManager
 vat: Vat
 ilk: bytes32
-uni_pairs: address[2]
+uni_pairs: address[3]
 
 
 @external
@@ -69,6 +69,7 @@ def __init__():
     self.uni_pairs = [
         0x2fDbAdf3C4D5A8666Bc06645B8358ab803996E28,  # Uniswap YFI/WETH
         0x088ee5007C98a9677165D78dD2109AE4a3D04d0C,  # Sushiswap YFI/WETH
+        0x41284a88D970D3552A26FaE680692ED40B34010C,  # Balancer YFI/WETH 50/50
     ]
 
 
