@@ -180,7 +180,7 @@ def enough_yfi(user: address, threshold: uint256) -> bool:
 @external
 def set_guest(guest: address, invited: bool):
     """
-    Invite of kick guests from the party.
+    Invite or kick guests from the party.
     """
     assert msg.sender == self.bouncer
     self.guests[guest] = invited
