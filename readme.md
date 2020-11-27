@@ -1,6 +1,6 @@
 # Guest List
 
-Measure productive YFI and authorize access base on decaying threshold.
+Measure productive YFI and authorize access based on decaying threshold.
 
 ## Supported protocols
 
