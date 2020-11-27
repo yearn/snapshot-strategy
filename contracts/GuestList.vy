@@ -209,7 +209,7 @@ def bribe_the_bouncer(guest: address = msg.sender):
 @external
 def total_yfi(user: address) -> uint256:
     """
-    Total YFI in wallet + ygov + vault + makerdao + uniswap lp + sushiswap lp.
+    Total YFI in wallet, yGov, Vault, MakerDAO, Uniswap, Sushiswap, Balancer, Bancor.
     """
     return (
         self.yfi.balanceOf(user)
@@ -234,7 +234,7 @@ def entrance_cost() -> uint256:
 @external
 def bribe_cost() -> uint256:
     """
-    How much YFI you need to bribe the bouncer with to enter.
+    How much YFI to bribe the bouncer to enter.
     """
     return self._entrance_cost() / 50
 
