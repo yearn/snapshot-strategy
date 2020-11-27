@@ -84,15 +84,6 @@ def set_guest(guest: address, invited: bool):
 
 
 @external
-def set_min_bag(new_min_bag: uint256):
-    """
-    Set the minimum bag size to bypass the guest list.
-    """
-    assert msg.sender == self.bouncer
-    self.min_bag = new_min_bag
-
-
-@external
 def set_bouncer(new_bouncer: address):
     """
     Replace bouncer role.
@@ -103,7 +94,13 @@ def set_bouncer(new_bouncer: address):
 
 @view
 @internal
-def _yfi_in_makerdao(user: address) -> uint256:
+def yfi_in_vault(user: address) -> uint256:
+    return self.yyfi.balanceOf(user) * self.yyfi.getPricePerFullShare() / 10 ** 18
+
+
+@view
+@internal
+def yfi_in_makerdao(user: address) -> uint256:
     proxy: address = self.proxy_registry.proxies(user)
     if proxy == ZERO_ADDRESS:
         return 0
@@ -135,36 +132,32 @@ def _total_yfi(user: address) -> uint256:
     return (
         self.yfi.balanceOf(user)
         + self.ygov.balanceOf(user)
-        + self.yyfi.balanceOf(user) * self.yyfi.getPricePerFullShare() / 10 ** 18
-        + self._yfi_in_makerdao(user)
+        + self.yfi_in_vault(user)
+        + self.yfi_in_makerdao(user)
+        + self.yfi_in_liquidity_pools(user)
     )
 
 
 @view
 @internal
-def _time_factor(bag: uint256) -> uint256:
-    return bag - min(bag * (block.timestamp - self.activation) / self.ape_out, bag)
+def _entrance_cost() -> uint256:
+    elapsed: uint256 = min(block.timestamp - self.activation, self.ape_out)
+    return self.min_bag - self.min_bag * elapsed / self.ape_out
 
 
 @view
 @external
 def total_yfi(user: address) -> uint256:
     """
-    Total YFI in wallet + ygov + vault + makerdao.
+    Total YFI in wallet + ygov + vault + makerdao + uniswap lp + sushiswap lp.
     """
     return self._total_yfi(user)
 
 
 @view
 @external
-def yfi_in_makerdao(user: address) -> uint256:
-    return self._yfi_in_makerdao(user)
-
-
-@view
-@external
 def entrance_cost() -> uint256:
-    return self._time_factor(self.min_bag)
+    return self._entrance_cost()
 
 
 @view
@@ -177,4 +170,4 @@ def authorized(guest: address, amount: uint256) -> bool:
         return True    
     if block.timestamp > self.activation + self.ape_out:
         return True
-    return self._total_yfi(guest) >= self._time_factor(self.min_bag)
+    return self._total_yfi(guest) >= self._entrance_cost()
