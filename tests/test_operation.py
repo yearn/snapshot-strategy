@@ -53,3 +53,12 @@ def test_decay(guest_list, guest, yfi, chain):
         chain.mine()
         assert guest_list.entrance_cost() <= guest_list.min_bag() * i / 10
         print(guest_list.entrance_cost())
+
+
+def test_bribe(guest_list, guest, yfi):
+    assert not guest_list.authorized(guest, 0)
+    bribe = guest_list.entrance_cost() / 50
+    yfi.transfer(guest, bribe)
+    yfi.approve(guest_list, bribe, {"from": guest})
+    tx = guest_list.bribe_the_bouncer({"from": guest})
+    assert guest_list.authorized(guest, 0)

@@ -92,6 +92,23 @@ def set_bouncer(new_bouncer: address):
 
 @view
 @internal
+def _entrance_cost() -> uint256:
+    elapsed: uint256 = min(block.timestamp - self.activation, self.ape_out)
+    return self.min_bag - self.min_bag * elapsed / self.ape_out
+
+
+@external
+def bribe_the_bouncer(guest: address = msg.sender):
+    """
+    Sneak into the party by bribing the bouncer with 2% of the entrance cost.
+    """
+    assert not self.guests[guest]  # dev: already invited
+    self.yfi.transferFrom(msg.sender, self.bouncer, self._entrance_cost() / 50)
+    self.guests[guest] = True
+
+
+@view
+@internal
 def yfi_in_vault(user: address) -> uint256:
     return self.yyfi.balanceOf(user) * self.yyfi.getPricePerFullShare() / 10 ** 18
 
@@ -134,13 +151,6 @@ def _total_yfi(user: address) -> uint256:
         + self.yfi_in_makerdao(user)
         + self.yfi_in_liquidity_pools(user)
     )
-
-
-@view
-@internal
-def _entrance_cost() -> uint256:
-    elapsed: uint256 = min(block.timestamp - self.activation, self.ape_out)
-    return self.min_bag - self.min_bag * elapsed / self.ape_out
 
 
 @view
