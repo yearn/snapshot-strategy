@@ -179,8 +179,11 @@ def yfi_in_bancor(user: address) -> uint256:
 
 
 @view
-@internal
-def _total_yfi(user: address) -> uint256:
+@external
+def total_yfi(user: address) -> uint256:
+    """
+    Total YFI in wallet + ygov + vault + makerdao + uniswap lp + sushiswap lp.
+    """
     return (
         self.yfi.balanceOf(user)
         + self.ygov.balanceOf(user)
@@ -192,12 +195,29 @@ def _total_yfi(user: address) -> uint256:
 
 
 @view
-@external
-def total_yfi(user: address) -> uint256:
-    """
-    Total YFI in wallet + ygov + vault + makerdao + uniswap lp + sushiswap lp.
-    """
-    return self._total_yfi(user)
+@internal
+def enough_yfi(user: address, threshold: uint256) -> bool:
+    # gas-optimized, exits as soon as threshold is reached
+    total: uint256 = 0
+    total += self.yfi.balanceOf(user)
+    if total >= threshold:
+        return True
+    total += self.ygov.balanceOf(user)
+    if total >= threshold:
+        return True
+    total += self.yfi_in_vault(user)
+    if total >= threshold:
+        return True
+    total += self.yfi_in_liquidity_pools(user)
+    if total >= threshold:
+        return True
+    total += self.yfi_in_makerdao(user)
+    if total >= threshold:
+        return True
+    total += self.yfi_in_bancor(user)
+    if total >= threshold:
+        return True
+    return False
 
 
 @view
@@ -216,4 +236,4 @@ def authorized(guest: address, amount: uint256) -> bool:
         return True    
     if block.timestamp > self.activation + self.ape_out:
         return True
-    return self._total_yfi(guest) >= self._entrance_cost()
+    return self.enough_yfi(guest, self._entrance_cost())
