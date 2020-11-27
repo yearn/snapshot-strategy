@@ -12,6 +12,17 @@ struct Urn:
     art: uint256
 
 
+struct ProtectedLiquidity:
+    provider: address
+    poolToken: address
+    reserveToken: address
+    poolAmount: uint256
+    reserveAmount: uint256
+    reserveRateN: uint256
+    reserveRateD: uint256
+    time: uint256
+
+
 interface Vault:
     def balanceOf(user: address) -> uint256: view
     def getPricePerFullShare() -> uint256: view
@@ -33,6 +44,12 @@ interface Vat:
     def urns(ilk: bytes32, user: address) -> Urn: view
 
 
+interface Bancor:
+    def protectedLiquidityCount(provider: address) -> uint256: view
+    def protectedLiquidityId(provider: address, index: uint256) -> uint256: view
+    def protectedLiquidity(_id: uint256) -> ProtectedLiquidity: view
+
+
 bouncer: public(address)
 guests: public(HashMap[address, bool])
 min_bag: public(uint256)
@@ -46,6 +63,7 @@ cdp_manager: DssCdpManager
 vat: Vat
 ilk: bytes32
 uni_pairs: address[3]
+bancor: Bancor
 
 
 @external
@@ -71,6 +89,7 @@ def __init__():
         0x088ee5007C98a9677165D78dD2109AE4a3D04d0C,  # Sushiswap YFI/WETH
         0x41284a88D970D3552A26FaE680692ED40B34010C,  # Balancer YFI/WETH 50/50
     ]
+    self.bancor = Bancor(0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55)
 
 
 @external
@@ -144,6 +163,23 @@ def yfi_in_liquidity_pools(user: address) -> uint256:
 
 @view
 @internal
+def yfi_in_bancor(user: address) -> uint256:
+    total: uint256 = 0
+    id: uint256 = 0
+    count: uint256 = self.bancor.protectedLiquidityCount(user)
+    liquidity: ProtectedLiquidity = empty(ProtectedLiquidity)
+    for i in range(100):
+        if i == count:
+            break
+        id = self.bancor.protectedLiquidityId(user, i)
+        liquidity = self.bancor.protectedLiquidity(id)
+        if liquidity.reserveToken == self.yfi.address:
+            total += liquidity.reserveAmount
+    return total
+
+
+@view
+@internal
 def _total_yfi(user: address) -> uint256:
     return (
         self.yfi.balanceOf(user)
@@ -151,6 +187,7 @@ def _total_yfi(user: address) -> uint256:
         + self.yfi_in_vault(user)
         + self.yfi_in_makerdao(user)
         + self.yfi_in_liquidity_pools(user)
+        + self.yfi_in_bancor(user)
     )
 
 
