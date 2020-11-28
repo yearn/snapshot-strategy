@@ -21,7 +21,7 @@ Measure productive YFI and authorize access based on decaying threshold.
 
 ## Interface
 
-`set_guest(address,bool)` Invite of kick guests from the party.
+`set_guest(address,bool)` Invite or kick guests from the party.
 
 `set_bouncer(address)` Replace bouncer role.
 
