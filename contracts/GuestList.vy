@@ -217,7 +217,8 @@ def set_bouncer(new_bouncer: address):
 @external
 def bribe_the_bouncer(guest: address = msg.sender):
     """
-    Sneak into the party by bribing the bouncer. The pass works for all future vaults.
+    Sneak into the party by bribing the bouncer.
+    The pass is good for any vault that uses this guest list.
     """
     assert not self.guests[guest]  # dev: already invited
     self.yfi.transferFrom(msg.sender, self.bouncer, self.bribe_cost)
@@ -228,7 +229,7 @@ def bribe_the_bouncer(guest: address = msg.sender):
 @external
 def total_yfi(user: address) -> uint256:
     """
-    Total YFI in wallet, yGov, Vault, MakerDAO, Uniswap, Sushiswap, Balancer, Bancor.
+    Total YFI in wallet, yGov, yYFI Vault, MakerDAO, Uniswap, Sushiswap, Balancer, Bancor.
     """
     return (
         self.yfi.balanceOf(user)
