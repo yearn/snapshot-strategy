@@ -26,6 +26,7 @@ struct ProtectedLiquidity:
 interface Vault:
     def balanceOf(user: address) -> uint256: view
     def getPricePerFullShare() -> uint256: view
+    def activation() -> uint256: view
 
 
 interface DSProxyRegistry:
@@ -50,11 +51,11 @@ interface Bancor:
     def protectedLiquidity(_id: uint256) -> ProtectedLiquidity: view
 
 
+MIN_BAG: constant(uint256) = 10 ** 18
+APE_OUT: constant(uint256) = 30 * 86400
 bouncer: public(address)
 guests: public(HashMap[address, bool])
-min_bag: public(uint256)
-ape_out: public(uint256)
-activation: public(uint256)
+bribe_cost: public(uint256)
 yfi: ERC20
 ygov: ERC20
 yyfi: Vault
@@ -69,10 +70,7 @@ bancor: Bancor
 @external
 def __init__():
     self.bouncer = msg.sender
-    self.activation = block.timestamp
-    # constants
-    self.min_bag = 10 ** 18  # 1 YFI to enter
-    self.ape_out = 30 * 86400  # 30 days falloff
+    self.bribe_cost = 25 * 10 ** 15  # 0.025 YFI life pass
     # tokens
     self.yfi = ERC20(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)
     self.ygov = ERC20(0xBa37B002AbaFDd8E89a1995dA52740bbC013D992)
@@ -90,13 +88,6 @@ def __init__():
         0x41284a88D970D3552A26FaE680692ED40B34010C,  # Balancer YFI/WETH 50/50
     ]
     self.bancor = Bancor(0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55)
-
-
-@view
-@internal
-def _entrance_cost() -> uint256:
-    elapsed: uint256 = min(block.timestamp - self.activation, self.ape_out)
-    return self.min_bag - self.min_bag * elapsed / self.ape_out
 
 
 @view
@@ -152,6 +143,13 @@ def yfi_in_bancor(user: address) -> uint256:
 
 @view
 @internal
+def _entrance_cost(start: uint256) -> uint256:
+    elapsed: uint256 = min(block.timestamp - start, APE_OUT)
+    return MIN_BAG - MIN_BAG * elapsed / APE_OUT
+
+
+@view
+@internal
 def enough_yfi(user: address, threshold: uint256) -> bool:
     # gas-optimized, exits as soon as threshold is reached
     total: uint256 = 0
@@ -177,13 +175,34 @@ def enough_yfi(user: address, threshold: uint256) -> bool:
 
 # EXTERNAL FUNCTIONS
 
+@view
+@external
+def min_bag() -> uint256:
+    return MIN_BAG
+
+
+@view
+@external
+def ape_out() -> uint256:
+    return APE_OUT
+
+
 @external
 def set_guest(guest: address, invited: bool):
     """
     Invite or kick guests from the party.
     """
-    assert msg.sender == self.bouncer
+    assert msg.sender == self.bouncer  # dev: unauthorized
     self.guests[guest] = invited
+
+
+@external
+def set_bribe_cost(new_cost: uint256):
+    """
+    Set bribe cost denominated in YFI.
+    """
+    assert msg.sender == self.bouncer  # dev: unauthorized
+    self.bribe_cost = new_cost
 
 
 @external
@@ -191,17 +210,18 @@ def set_bouncer(new_bouncer: address):
     """
     Replace bouncer role.
     """
-    assert msg.sender == self.bouncer
+    assert msg.sender == self.bouncer  # dev: unauthorized
     self.bouncer = new_bouncer
 
 
 @external
 def bribe_the_bouncer(guest: address = msg.sender):
     """
-    Sneak into the party by bribing the bouncer with 2% of the entrance cost.
+    Sneak into the party by bribing the bouncer.
+    The pass is good for any vault that uses this guest list.
     """
     assert not self.guests[guest]  # dev: already invited
-    self.yfi.transferFrom(msg.sender, self.bouncer, self._entrance_cost() / 50)
+    self.yfi.transferFrom(msg.sender, self.bouncer, self.bribe_cost)
     self.guests[guest] = True
 
 
@@ -209,7 +229,7 @@ def bribe_the_bouncer(guest: address = msg.sender):
 @external
 def total_yfi(user: address) -> uint256:
     """
-    Total YFI in wallet, yGov, Vault, MakerDAO, Uniswap, Sushiswap, Balancer, Bancor.
+    Total YFI in wallet, yGov, yYFI Vault, MakerDAO, Uniswap, Sushiswap, Balancer, Bancor.
     """
     return (
         self.yfi.balanceOf(user)
@@ -223,20 +243,11 @@ def total_yfi(user: address) -> uint256:
 
 @view
 @external
-def entrance_cost() -> uint256:
+def entrance_cost(start: uint256) -> uint256:
     """
     How much productive YFI is currently needed to enter.
     """
-    return self._entrance_cost()
-
-
-@view
-@external
-def bribe_cost() -> uint256:
-    """
-    How much YFI to bribe the bouncer to enter.
-    """
-    return self._entrance_cost() / 50
+    return self._entrance_cost(start)
 
 
 @view
@@ -246,7 +257,10 @@ def authorized(guest: address, amount: uint256) -> bool:
     Check if a user with a bag of certain size is allowed to the party.
     """
     if self.guests[guest]:
-        return True    
-    if block.timestamp > self.activation + self.ape_out:
         return True
-    return self.enough_yfi(guest, self._entrance_cost())
+    # NOTE: msg.sender must implement `activation()`
+    start: uint256 = Vault(msg.sender).activation()
+    if block.timestamp >= start + APE_OUT:
+        return True
+    threshold: uint256 = self._entrance_cost(start)
+    return self.enough_yfi(guest, threshold)
