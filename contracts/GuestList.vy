@@ -51,10 +51,10 @@ interface Bancor:
     def protectedLiquidity(_id: uint256) -> ProtectedLiquidity: view
 
 
+MIN_BAG: constant(uint256) = 10 ** 18
+APE_OUT: constant(uint256) = 30 * 86400
 bouncer: public(address)
 guests: public(HashMap[address, bool])
-min_bag: public(uint256)
-ape_out: public(uint256)
 bribe_cost: public(uint256)
 yfi: ERC20
 ygov: ERC20
@@ -70,9 +70,6 @@ bancor: Bancor
 @external
 def __init__():
     self.bouncer = msg.sender
-    # constants
-    self.min_bag = 10 ** 18  # 1 YFI to enter
-    self.ape_out = 30 * 86400  # 30 days falloff
     self.bribe_cost = 25 * 10 ** 15  # 0.025 YFI life pass
     # tokens
     self.yfi = ERC20(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)
@@ -147,8 +144,8 @@ def yfi_in_bancor(user: address) -> uint256:
 @view
 @internal
 def _entrance_cost(start: uint256) -> uint256:
-    elapsed: uint256 = min(block.timestamp - start, self.ape_out)
-    return self.min_bag - self.min_bag * elapsed / self.ape_out
+    elapsed: uint256 = min(block.timestamp - start, APE_OUT)
+    return MIN_BAG - MIN_BAG * elapsed / APE_OUT
 
 
 @view
@@ -177,6 +174,18 @@ def enough_yfi(user: address, threshold: uint256) -> bool:
     return False
 
 # EXTERNAL FUNCTIONS
+
+@view
+@external
+def min_bag() -> uint256:
+    return MIN_BAG
+
+
+@view
+@external
+def ape_out() -> uint256:
+    return APE_OUT
+
 
 @external
 def set_guest(guest: address, invited: bool):
@@ -248,7 +257,9 @@ def authorized(guest: address, amount: uint256) -> bool:
     """
     if self.guests[guest]:
         return True
+    # NOTE: msg.sender must implement `activation()`
     start: uint256 = Vault(msg.sender).activation()
-    if block.timestamp >= start + self.ape_out:
+    if block.timestamp >= start + APE_OUT:
         return True
-    return self.enough_yfi(guest, self._entrance_cost(start))
+    threshold: uint256 = self._entrance_cost(start)
+    return self.enough_yfi(guest, threshold)
