@@ -51,6 +51,28 @@ interface Bancor:
     def protectedLiquidity(_id: uint256) -> ProtectedLiquidity: view
 
 
+event GuestInvited:
+    guest: address
+
+
+event GuestRemoved:
+    guest: address
+
+
+event BouncerChanged:
+    bouncer: address
+
+
+event BribeCostUpdated:
+    bribe_cost: uint256
+
+
+event BribeReceived:
+    guest: address
+    bouncer: address
+    bribe: uint256
+
+
 MIN_BAG: constant(uint256) = 10 ** 18
 APE_OUT: constant(uint256) = 30 * 86400
 bouncer: public(address)
@@ -88,6 +110,9 @@ def __init__():
         0x41284a88D970D3552A26FaE680692ED40B34010C,  # Balancer YFI/WETH 50/50
     ]
     self.bancor = Bancor(0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55)
+
+    log BouncerChanged(self.bouncer)
+    log BribeCostUpdated(self.bribe_cost)
 
 
 @view
@@ -194,6 +219,10 @@ def set_guest(guest: address, invited: bool):
     """
     assert msg.sender == self.bouncer  # dev: unauthorized
     self.guests[guest] = invited
+    if invited:
+        log GuestInvited(guest)
+    else:
+        log GuestRemoved(guest)
 
 
 @external
@@ -203,6 +232,7 @@ def set_bribe_cost(new_cost: uint256):
     """
     assert msg.sender == self.bouncer  # dev: unauthorized
     self.bribe_cost = new_cost
+    log BribeCostUpdated(self.bribe_cost)
 
 
 @external
@@ -212,6 +242,7 @@ def set_bouncer(new_bouncer: address):
     """
     assert msg.sender == self.bouncer  # dev: unauthorized
     self.bouncer = new_bouncer
+    log BouncerChanged(self.bouncer)
 
 
 @external
@@ -223,6 +254,9 @@ def bribe_the_bouncer(guest: address = msg.sender):
     assert not self.guests[guest]  # dev: already invited
     self.yfi.transferFrom(msg.sender, self.bouncer, self.bribe_cost)
     self.guests[guest] = True
+
+    log BribeReceived(guest, self.bouncer, self.bribe_cost)
+    log GuestInvited(guest)
 
 
 @view
