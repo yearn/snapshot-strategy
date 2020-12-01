@@ -53,7 +53,10 @@ interface Bancor:
 
 event GuestInvited:
     guest: address
-    invited: bool
+
+
+event GuestRemoved:
+    guest: address
 
 
 event BouncerChanged:
@@ -216,7 +219,10 @@ def set_guest(guest: address, invited: bool):
     """
     assert msg.sender == self.bouncer  # dev: unauthorized
     self.guests[guest] = invited
-    log GuestInvited(guest, invited)
+    if invited:
+        log GuestInvited(guest)
+    else:
+        log GuestRemoved(guest)
 
 
 @external
@@ -250,7 +256,7 @@ def bribe_the_bouncer(guest: address = msg.sender):
     self.guests[guest] = True
 
     log BribeReceived(guest, self.bouncer, self.bribe_cost)
-    log GuestInvited(guest, True)
+    log GuestInvited(guest)
 
 
 @view

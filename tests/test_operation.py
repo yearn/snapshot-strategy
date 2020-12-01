@@ -1,8 +1,10 @@
 def test_override(guest_list, vault, guest):
     assert not vault.authorized(guest, 0)
-    guest_list.set_guest(guest, True)
+    tx = guest_list.set_guest(guest, True)
+    assert 'GuestInvited' in tx.events
     assert vault.authorized(guest, 0)
-    guest_list.set_guest(guest, False)
+    tx = guest_list.set_guest(guest, False)
+    assert 'GuestRemoved' in tx.events
     assert not vault.authorized(guest, 0)
 
 
@@ -62,4 +64,6 @@ def test_bribe(guest_list, vault, guest, yfi):
     yfi.transfer(guest, bribe)
     yfi.approve(guest_list, bribe, {"from": guest})
     tx = guest_list.bribe_the_bouncer({"from": guest})
+    assert 'GuestInvited' in tx.events
+    assert 'BribeReceived' in tx.events
     assert vault.authorized(guest, 0)
