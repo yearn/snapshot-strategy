@@ -2,6 +2,8 @@
 
 Measure productive YFI and authorize access based on decaying threshold.
 
+Mainnet deployment: [0x5d38391c9DA9Ce9daC1a7b3899e9F40E4d01F68C](https://etherscan.io/address/0x5d38391c9da9ce9dac1a7b3899e9f40e4d01f68c#code)
+
 ## Supported protocols
 
 - YFI in wallet
