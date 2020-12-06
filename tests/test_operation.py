@@ -1,11 +1,8 @@
 def test_override(guest_list, vault, guest):
     assert not vault.authorized(guest, 0)
-    tx = guest_list.set_guest(guest, True)
+    tx = guest_list.invite_guest(guest)
     assert 'GuestInvited' in tx.events
     assert vault.authorized(guest, 0)
-    tx = guest_list.set_guest(guest, False)
-    assert 'GuestRemoved' in tx.events
-    assert not vault.authorized(guest, 0)
 
 
 def test_yfi(guest_list, vault, guest, yfi):
@@ -56,14 +53,3 @@ def test_decay(guest_list, vault, chain):
         chain.mine()
         assert guest_list.entrance_cost(start) <= guest_list.min_bag() * i / 10
         print(guest_list.entrance_cost(start))
-
-
-def test_bribe(guest_list, vault, guest, yfi):
-    assert not vault.authorized(guest, 0)
-    bribe = guest_list.bribe_cost()
-    yfi.transfer(guest, bribe)
-    yfi.approve(guest_list, bribe, {"from": guest})
-    tx = guest_list.bribe_the_bouncer({"from": guest})
-    assert 'GuestInvited' in tx.events
-    assert 'BribeReceived' in tx.events
-    assert vault.authorized(guest, 0)
