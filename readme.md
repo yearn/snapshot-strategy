@@ -2,7 +2,7 @@
 
 Measure productive YFI and authorize access based on decaying threshold.
 
-Mainnet deployment: [0x5d38391c9DA9Ce9daC1a7b3899e9F40E4d01F68C](https://etherscan.io/address/0x5d38391c9da9ce9dac1a7b3899e9f40e4d01f68c#code)
+Mainnet deployment: [0xcB16133a37Ef19F90C570B426292BDcca185BF47](https://etherscan.io/address/0xcb16133a37ef19f90c570b426292bdcca185bf47#code)
 
 ## Supported protocols
 
