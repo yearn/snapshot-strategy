@@ -55,27 +55,13 @@ event GuestInvited:
     guest: address
 
 
-event GuestRemoved:
-    guest: address
-
-
-event BouncerChanged:
+event BouncerAdded:
     bouncer: address
-
-
-event BribeCostUpdated:
-    bribe_cost: uint256
-
-
-event BribeReceived:
-    guest: address
-    bouncer: address
-    bribe: uint256
 
 
 MIN_BAG: constant(uint256) = 10 ** 18
 APE_OUT: constant(uint256) = 30 * 86400
-bouncer: public(address)
+bouncers: public(HashMap[address, bool])
 guests: public(HashMap[address, bool])
 bribe_cost: public(uint256)
 yfi: ERC20
@@ -91,8 +77,7 @@ bancor: Bancor
 
 @external
 def __init__():
-    self.bouncer = msg.sender
-    self.bribe_cost = 25 * 10 ** 15  # 0.025 YFI life pass
+    self.bouncers[msg.sender] = True
     # tokens
     self.yfi = ERC20(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)
     self.ygov = ERC20(0xBa37B002AbaFDd8E89a1995dA52740bbC013D992)
@@ -111,8 +96,7 @@ def __init__():
     ]
     self.bancor = Bancor(0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55)
 
-    log BouncerChanged(self.bouncer)
-    log BribeCostUpdated(self.bribe_cost)
+    log BouncerAdded(msg.sender)
 
 
 @view
@@ -213,50 +197,25 @@ def ape_out() -> uint256:
 
 
 @external
-def set_guest(guest: address, invited: bool):
+def invite_guest(guest: address):
     """
-    Invite or kick guests from the party.
+    Invite a guest to the party.
     """
-    assert msg.sender == self.bouncer  # dev: unauthorized
-    self.guests[guest] = invited
-    if invited:
-        log GuestInvited(guest)
-    else:
-        log GuestRemoved(guest)
-
-
-@external
-def set_bribe_cost(new_cost: uint256):
-    """
-    Set bribe cost denominated in YFI.
-    """
-    assert msg.sender == self.bouncer  # dev: unauthorized
-    self.bribe_cost = new_cost
-    log BribeCostUpdated(self.bribe_cost)
-
-
-@external
-def set_bouncer(new_bouncer: address):
-    """
-    Replace bouncer role.
-    """
-    assert msg.sender == self.bouncer  # dev: unauthorized
-    self.bouncer = new_bouncer
-    log BouncerChanged(self.bouncer)
-
-
-@external
-def bribe_the_bouncer(guest: address = msg.sender):
-    """
-    Sneak into the party by bribing the bouncer.
-    The pass is good for any vault that uses this guest list.
-    """
+    assert self.bouncers[msg.sender]  # dev: unauthorized
     assert not self.guests[guest]  # dev: already invited
-    self.yfi.transferFrom(msg.sender, self.bouncer, self.bribe_cost)
     self.guests[guest] = True
-
-    log BribeReceived(guest, self.bouncer, self.bribe_cost)
     log GuestInvited(guest)
+
+
+@external
+def add_bouncer(bouncer: address):
+    """
+    Hire an additional bouncer.
+    """
+    assert self.bouncers[msg.sender]  # dev: unauthorized
+    assert not self.bouncers[bouncer]  # dev: already a bouncer
+    self.bouncers[bouncer] = True
+    log BouncerAdded(bouncer)
 
 
 @view
