@@ -1,11 +1,8 @@
 def test_override(guest_list, vault, guest):
     assert not vault.authorized(guest, 0)
-    tx = guest_list.set_guest(guest, True)
+    tx = guest_list.invite_guest(guest)
     assert 'GuestInvited' in tx.events
     assert vault.authorized(guest, 0)
-    tx = guest_list.set_guest(guest, False)
-    assert 'GuestRemoved' in tx.events
-    assert not vault.authorized(guest, 0)
 
 
 def test_yfi(guest_list, vault, guest, yfi):

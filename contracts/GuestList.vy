@@ -1,4 +1,4 @@
-# @version 0.2.7
+# @version 0.2.8
 from vyper.interfaces import ERC20
 
 
@@ -55,12 +55,20 @@ event GuestInvited:
     guest: address
 
 
-event GuestRemoved:
-    guest: address
-
-
-event BouncerChanged:
+event BouncerAdded:
     bouncer: address
+
+
+event BouncerRemoved:
+    bouncer: address
+
+
+event GovernanceUpdated:
+    governance: address
+
+
+event TreasuryUpdated:
+    treasury: address
 
 
 event BribeCostUpdated:
@@ -69,13 +77,15 @@ event BribeCostUpdated:
 
 event BribeReceived:
     guest: address
-    bouncer: address
+    treasury: address
     bribe: uint256
 
 
 MIN_BAG: constant(uint256) = 10 ** 18
 APE_OUT: constant(uint256) = 30 * 86400
-bouncer: public(address)
+bouncers: public(HashMap[address, bool])
+governance: public(address)
+treasury: public(address)
 guests: public(HashMap[address, bool])
 bribe_cost: public(uint256)
 yfi: ERC20
@@ -91,7 +101,9 @@ bancor: Bancor
 
 @external
 def __init__():
-    self.bouncer = msg.sender
+    self.bouncers[msg.sender] = True
+    self.governance = msg.sender
+    self.treasury = msg.sender
     self.bribe_cost = 25 * 10 ** 15  # 0.025 YFI life pass
     # tokens
     self.yfi = ERC20(0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e)
@@ -111,7 +123,9 @@ def __init__():
     ]
     self.bancor = Bancor(0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55)
 
-    log BouncerChanged(self.bouncer)
+    log BouncerAdded(msg.sender)
+    log GovernanceUpdated(msg.sender)
+    log TreasuryUpdated(msg.sender)
     log BribeCostUpdated(self.bribe_cost)
 
 
@@ -213,36 +227,66 @@ def ape_out() -> uint256:
 
 
 @external
-def set_guest(guest: address, invited: bool):
+def invite_guest(guest: address):
     """
-    Invite or kick guests from the party.
+    Invite a guest to the party.
     """
-    assert msg.sender == self.bouncer  # dev: unauthorized
-    self.guests[guest] = invited
-    if invited:
-        log GuestInvited(guest)
-    else:
-        log GuestRemoved(guest)
+    assert self.bouncers[msg.sender]  # dev: unauthorized
+    assert not self.guests[guest]  # dev: already invited
+    self.guests[guest] = True
+    log GuestInvited(guest)
 
 
 @external
-def set_bribe_cost(new_cost: uint256):
+def set_bribe_cost(bribe_cost: uint256):
     """
     Set bribe cost denominated in YFI.
     """
-    assert msg.sender == self.bouncer  # dev: unauthorized
-    self.bribe_cost = new_cost
-    log BribeCostUpdated(self.bribe_cost)
+    assert msg.sender == self.governance  # dev: unauthorized
+    self.bribe_cost = bribe_cost
+    log BribeCostUpdated(bribe_cost)
 
 
 @external
-def set_bouncer(new_bouncer: address):
+def add_bouncer(bouncer: address):
     """
-    Replace bouncer role.
+    Hire an additional bouncer.
     """
-    assert msg.sender == self.bouncer  # dev: unauthorized
-    self.bouncer = new_bouncer
-    log BouncerChanged(self.bouncer)
+    assert self.bouncers[msg.sender] or msg.sender == self.governance  # dev: unauthorized
+    assert not self.bouncers[bouncer]  # dev: already a bouncer
+    self.bouncers[bouncer] = True
+    log BouncerAdded(bouncer)
+
+
+@external
+def remove_bouncer(bouncer: address):
+    """
+    Fire a bouncer.
+    """
+    assert msg.sender == self.governance  # dev: unauthorized
+    assert self.bouncers[bouncer]  # dev: not a bouncer
+    self.bouncers[bouncer] = False
+    log BouncerRemoved(bouncer)
+
+
+@external
+def set_governance(governance: address):
+    """
+    Replace the goverance role.
+    """
+    assert msg.sender == self.governance  # dev: unauthorized
+    self.governance = governance
+    log GovernanceUpdated(governance)
+
+
+@external
+def set_treasury(treasury: address):
+    """
+    Replace the treasury role.
+    """
+    assert msg.sender == self.governance  # dev: unauthorized
+    self.treasury = treasury
+    log TreasuryUpdated(treasury)
 
 
 @external
@@ -252,10 +296,10 @@ def bribe_the_bouncer(guest: address = msg.sender):
     The pass is good for any vault that uses this guest list.
     """
     assert not self.guests[guest]  # dev: already invited
-    self.yfi.transferFrom(msg.sender, self.bouncer, self.bribe_cost)
+    self.yfi.transferFrom(msg.sender, self.treasury, self.bribe_cost)
     self.guests[guest] = True
 
-    log BribeReceived(guest, self.bouncer, self.bribe_cost)
+    log BribeReceived(guest, self.treasury, self.bribe_cost)
     log GuestInvited(guest)
 
 
