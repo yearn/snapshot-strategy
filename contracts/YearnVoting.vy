@@ -1,4 +1,4 @@
-# @version 0.2.11
+# @version 0.2.16
 # @author banteg
 # @notice Calculate voting power from productive YFI
 from vyper.interfaces import ERC20
@@ -40,6 +40,11 @@ struct UserInfo:
     rewardDebt: uint256
 
 
+interface Registry:
+    def numVaults(token: address) -> uint256: view
+    def vaults(token: address, n: uint256) -> address: view
+
+
 interface Vault:
     def pricePerShare() -> uint256: view
 
@@ -75,7 +80,7 @@ interface Unit:
 
 
 yfi: constant(address) = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e
-vault: constant(address) = 0xE14d13d8B3b85aF791b2AADD661cDBd5E6097Db1
+registry: constant(address) = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804
 balancer: constant(address) = 0x41284a88D970D3552A26FaE680692ED40B34010C
 masterchef: constant(address) = 0xc2EdaD668740f1aA35E4D8f227fB8E17dcA888Cd
 sushiswap: constant(address) = 0x088ee5007C98a9677165D78dD2109AE4a3D04d0C
@@ -124,7 +129,14 @@ def sushiswap_balance(user: address) -> uint256:
 @view
 @internal
 def vault_balance(user: address) -> uint256:
-    return ERC20(vault).balanceOf(user) * Vault(vault).pricePerShare() / 10 ** 18
+    total: uint256 = 0
+    count: uint256 = Registry(registry).numVaults(yfi)
+    for i in range(100):
+        if i == count:
+            break
+        vault: address = Registry(registry).vaults(yfi, i)
+        total += ERC20(vault).balanceOf(user) * Vault(vault).pricePerShare() / 10 ** 18
+    return total
 
 
 @view
