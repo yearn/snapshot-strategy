@@ -40,6 +40,13 @@ struct UserInfo:
     rewardDebt: uint256
 
 
+struct PoolTokenInfo:
+    cash: uint256
+    managed: uint256
+    lastChangeBlock: uint256
+    assetManager: address
+
+
 interface Registry:
     def numVaults(token: address) -> uint256: view
     def vaults(token: address, n: uint256) -> address: view
@@ -79,9 +86,14 @@ interface Unit:
     def collaterals(token: address, user: address) -> uint256: view
 
 
+interface BalancerVault:
+    def getPool(pool_id: bytes32) -> (address, uint256): view
+    def getPoolTokenInfo(pool_id: bytes32, token: address) -> PoolTokenInfo: view
+
+
 yfi: constant(address) = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e
 registry: constant(address) = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804
-balancer: constant(address) = 0x41284a88D970D3552A26FaE680692ED40B34010C
+balancer_v2: constant(address) = 0xBA12222222228d8Ba445958a75a0704d566BF2C8
 masterchef: constant(address) = 0xc2EdaD668740f1aA35E4D8f227fB8E17dcA888Cd
 sushiswap: constant(address) = 0x088ee5007C98a9677165D78dD2109AE4a3D04d0C
 uniswap: constant(address) = 0x2fDbAdf3C4D5A8666Bc06645B8358ab803996E28
@@ -158,12 +170,28 @@ def yfi_in_bancor(user: address) -> uint256:
 
 @view
 @internal
+def yfi_in_balancer_v2(user: address) -> uint256:
+    pools: bytes32[3] = [
+        0x01abc00e86c7e258823b9a055fd62ca6cf61a16300010000000000000000003b,
+        0xf2b7794b89ea4fd2abfe66dcb6529a27c03d429e0002000000000000000000b0,
+        0x186084ff790c65088ba694df11758fae4943ee9e000200000000000000000013,
+    ]
+    total: uint256 = 0
+    for pool_id in pools:
+        pool: address = BalancerVault(balancer_v2).getPool(pool_id)[0]
+        cash: uint256 = BalancerVault(balancer_v2).getPoolTokenInfo(pool_id, yfi).cash
+        total += cash * ERC20(pool).balanceOf(user) / ERC20(pool).totalSupply()
+    return total
+
+
+@view
+@internal
 def _voting_balances(user: address) -> VotingBalances:
     return VotingBalances({
         wallet: ERC20(yfi).balanceOf(user),
         vault: self.vault_balance(user),
         bancor: self.yfi_in_bancor(user),
-        balancer: self.lp_balance(balancer, user),
+        balancer: self.yfi_in_balancer_v2(user),
         uniswap: self.lp_balance(uniswap, user),
         sushiswap: self.sushiswap_balance(user),
         makerdao: self.makerdao_collateral(user),
