@@ -12,6 +12,7 @@ struct VotingBalances:
     sushiswap: uint256
     makerdao: uint256
     unit: uint256
+    instadapp: uint256
 
 # yearn
 
@@ -113,6 +114,8 @@ interface BalancerVault:
 
 # instadapp
 
+insta_list: constant(address) = 0x4c8a1BEb8a87765788946D6B19C6C6355194AbEb
+
 struct UserLink:
     first: uint256
     last: uint256
@@ -204,6 +207,23 @@ def yfi_in_balancer_v2(user: address) -> uint256:
 
 @view
 @internal
+def instadapp_balance(user: address) -> uint256:
+    first: uint256 = InstaList(insta_list).userLink(user).first
+    result: Bytes[32] = raw_call(
+        insta_list,
+        concat(method_id('accountAddr(uint64)'), convert(first, bytes32)),
+        max_outsize=32,
+        is_static_call=True
+    )
+    account: address = convert(convert(result, bytes32), address)
+    total: uint256 = 0
+    total += ERC20(yfi).balanceOf(account)
+    total += self.makerdao_collateral(account)
+    return total
+
+
+@view
+@internal
 def _voting_balances(user: address) -> VotingBalances:
     return VotingBalances({
         wallet: ERC20(yfi).balanceOf(user),
@@ -214,6 +234,7 @@ def _voting_balances(user: address) -> VotingBalances:
         sushiswap: self.sushiswap_balance(user),
         makerdao: self.makerdao_collateral(user),
         unit: Unit(unit).collaterals(yfi, user),
+        instadapp: self.instadapp_balance(user),
     })
 
 
@@ -230,6 +251,7 @@ def balanceOf(user: address) -> uint256:
         + bal.sushiswap
         + bal.makerdao
         + bal.unit
+        + bal.instadapp
     )
 
 
