@@ -208,17 +208,32 @@ def yfi_in_balancer_v2(user: address) -> uint256:
 @view
 @internal
 def instadapp_balance(user: address) -> uint256:
-    first: uint256 = InstaList(insta_list).userLink(user).first
-    result: Bytes[32] = raw_call(
-        insta_list,
-        concat(method_id('accountAddr(uint64)'), convert(first, bytes32)),
-        max_outsize=32,
-        is_static_call=True
-    )
-    account: address = convert(convert(result, bytes32), address)
+    link: UserLink = InstaList(insta_list).userLink(user)
+    if link.count == 0:
+        return 0
+    current: uint256 = link.first
     total: uint256 = 0
-    total += ERC20(yfi).balanceOf(account)
-    total += self.makerdao_collateral(account)
+    for i in range(100):
+        result: Bytes[32] = raw_call(
+            insta_list,
+            concat(method_id('accountAddr(uint64)'), convert(current, bytes32)),
+            max_outsize=32,
+            is_static_call=True,
+        )
+        account: address = convert(convert(result, bytes32), address)
+        total += ERC20(yfi).balanceOf(account)
+        total += self.makerdao_collateral(account)
+        if current == link.last:
+            break
+        # read next id from linked list
+        result_2: Bytes[64] = raw_call(
+            insta_list,
+            concat(method_id('userList(address,uint64)'), convert(user, bytes32), convert(current, bytes32)),
+            max_outsize=64,
+            is_static_call=True,
+        )
+        current = convert(convert(slice(result_2, 32, 32), bytes32), uint256)
+    
     return total
 
 
