@@ -13,16 +13,50 @@ struct VotingBalances:
     makerdao: uint256
     unit: uint256
 
+# yearn
+
+yfi: constant(address) = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e
+registry: constant(address) = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804
+
+interface Registry:
+    def numVaults(token: address) -> uint256: view
+    def vaults(token: address, n: uint256) -> address: view
+
+interface Vault:
+    def pricePerShare() -> uint256: view
+
+
+# makerdao
+
+proxy_registry: constant(address) = 0x4678f0a6958e4D2Bc4F1BAF7Bc52E8F3564f3fE4
+cdp_manager: constant(address) = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39
+vat: constant(address) = 0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B
 
 struct List:
     prev: uint256
     next: uint256
 
-
 struct Urn:
     ink: uint256
     art: uint256
 
+interface DSProxyRegistry:
+    def proxies(user: address) -> address: view
+
+interface DssCdpManager:
+    def count(user: address) -> uint256: view
+    def first(user: address) -> uint256: view
+    def list(cdp: uint256) -> List: view
+    def ilks(cdp: uint256) -> bytes32: view
+    def urns(cdp: uint256) -> address: view
+
+interface Vat:
+    def urns(ilk: bytes32, user: address) -> Urn: view
+
+
+# bancor
+
+bancor: constant(address) = 0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55
 
 struct ProtectedLiquidity:
     provider: address
@@ -34,11 +68,37 @@ struct ProtectedLiquidity:
     reserveRateD: uint256
     time: uint256
 
+interface Bancor:
+    def protectedLiquidityCount(provider: address) -> uint256: view
+    def protectedLiquidityId(provider: address, index: uint256) -> uint256: view
+    def protectedLiquidity(_id: uint256) -> ProtectedLiquidity: view
+
+
+# sushi
+
+masterchef: constant(address) = 0xc2EdaD668740f1aA35E4D8f227fB8E17dcA888Cd
+sushiswap: constant(address) = 0x088ee5007C98a9677165D78dD2109AE4a3D04d0C
+uniswap: constant(address) = 0x2fDbAdf3C4D5A8666Bc06645B8358ab803996E28
 
 struct UserInfo:
     amount: uint256
     rewardDebt: uint256
 
+interface MasterChef:
+    def userInfo(pid: uint256, user: address) -> UserInfo: view
+
+
+# unit
+
+unit: constant(address) = 0xb1cFF81b9305166ff1EFc49A129ad2AfCd7BCf19
+
+interface Unit:
+    def collaterals(token: address, user: address) -> uint256: view
+
+
+# balancer v2
+
+balancer_v2: constant(address) = 0xBA12222222228d8Ba445958a75a0704d566BF2C8
 
 struct PoolTokenInfo:
     cash: uint256
@@ -46,62 +106,20 @@ struct PoolTokenInfo:
     lastChangeBlock: uint256
     assetManager: address
 
-
-interface Registry:
-    def numVaults(token: address) -> uint256: view
-    def vaults(token: address, n: uint256) -> address: view
-
-
-interface Vault:
-    def pricePerShare() -> uint256: view
-
-
-interface DSProxyRegistry:
-    def proxies(user: address) -> address: view
-
-
-interface DssCdpManager:
-    def count(user: address) -> uint256: view
-    def first(user: address) -> uint256: view
-    def list(cdp: uint256) -> List: view
-    def ilks(cdp: uint256) -> bytes32: view
-    def urns(cdp: uint256) -> address: view
-
-
-interface Vat:
-    def urns(ilk: bytes32, user: address) -> Urn: view
-
-
-interface Bancor:
-    def protectedLiquidityCount(provider: address) -> uint256: view
-    def protectedLiquidityId(provider: address, index: uint256) -> uint256: view
-    def protectedLiquidity(_id: uint256) -> ProtectedLiquidity: view
-
-
-interface MasterChef:
-    def userInfo(pid: uint256, user: address) -> UserInfo: view
-
-
-interface Unit:
-    def collaterals(token: address, user: address) -> uint256: view
-
-
 interface BalancerVault:
     def getPool(pool_id: bytes32) -> (address, uint256): view
     def getPoolTokenInfo(pool_id: bytes32, token: address) -> PoolTokenInfo: view
 
 
-yfi: constant(address) = 0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e
-registry: constant(address) = 0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804
-balancer_v2: constant(address) = 0xBA12222222228d8Ba445958a75a0704d566BF2C8
-masterchef: constant(address) = 0xc2EdaD668740f1aA35E4D8f227fB8E17dcA888Cd
-sushiswap: constant(address) = 0x088ee5007C98a9677165D78dD2109AE4a3D04d0C
-uniswap: constant(address) = 0x2fDbAdf3C4D5A8666Bc06645B8358ab803996E28
-bancor: constant(address) = 0xf5FAB5DBD2f3bf675dE4cB76517d4767013cfB55
-unit: constant(address) = 0xb1cFF81b9305166ff1EFc49A129ad2AfCd7BCf19
-proxy_registry: constant(address) = 0x4678f0a6958e4D2Bc4F1BAF7Bc52E8F3564f3fE4
-cdp_manager: constant(address) = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39
-vat: constant(address) = 0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B
+# instadapp
+
+struct UserLink:
+    first: uint256
+    last: uint256
+    count: uint256
+
+interface InstaList:
+    def userLink(user: address) -> UserLink: view
 
 
 @view
@@ -110,7 +128,7 @@ def makerdao_collateral(user: address) -> uint256:
     yfi_a: bytes32 = 0x5946492d41000000000000000000000000000000000000000000000000000000
     proxy: address = DSProxyRegistry(proxy_registry).proxies(user)
     if proxy == ZERO_ADDRESS:
-        return 0
+        proxy = user
     cdp: uint256 = DssCdpManager(cdp_manager).first(proxy)
     urn: address = ZERO_ADDRESS
     total: uint256 = 0
