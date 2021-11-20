@@ -2,19 +2,19 @@
 
 Calculate voting power from productive YFI to be used on Snapshot.
 
-Mainnet deployment: [`0x5584e034094BBC734751fE48A701e9758e1dDA88`](https://etherscan.io/address/0x5584e034094BBC734751fE48A701e9758e1dDA88)
+Mainnet deployment: [`--`](https://etherscan.io/address/--)
 
 ## Measures YFI
 
 - Wallet
-- yvYFI v2 Vault
+- Yearn v2 YFI Vault
 - Bancor
-- Balancer YFI/WETH
-- Uniswap
-- Sushiswap YFI/WETH
-- SLP staked in MasterChef
+- Balancer v2 YFI/WETH
+- Uniswap v2
+- Sushiswap YFI/WETH incl. MasterChef
 - MakerDAO collateral
 - Unit collateral
+- Instadapp DeFi Smart Account, incl. MakerDAO
 
 ## Interface
 
