@@ -2,7 +2,7 @@
 
 Calculate voting power from productive YFI to be used on Snapshot.
 
-Mainnet deployment: [`--`](https://etherscan.io/address/--)
+Mainnet deployment: [`0xA79e803FffE9DA37477ddaFD7C6F3dbDCa1C566C`](https://etherscan.io/address/0xA79e803FffE9DA37477ddaFD7C6F3dbDCa1C566C)
 
 ## Measures YFI
 
